@@ -8,8 +8,6 @@ public class Main {
     private static final String PING_RESPONSE = "PONG";
 
     public static void main(String[] args) {
-        // You can use print statements as follows for debugging, they'll be visible when running tests.
-        System.out.println("Logs from your program will appear here!");
 
         ServerSocket serverSocket = null;
         Socket clientSocket = null;
@@ -17,13 +15,26 @@ public class Main {
         try {
             serverSocket = new ServerSocket(port);
             serverSocket.setReuseAddress(true);
+
             // Wait for connection from client.
+            System.out.println("Waiting for connection from client...");
             clientSocket = serverSocket.accept();
 
-            byte[] data = new byte[100];
-            int size = clientSocket.getInputStream().read(data);
-            DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
-            out.writeBytes(encodeAsRespSimpleString(PING_RESPONSE));
+            // Read data from client.
+            byte[] inputBuffer = new byte[100];
+            while(true) {
+                int size = clientSocket.getInputStream().read(inputBuffer);
+                if(size == -1) break;
+
+                String inputData = new String(inputBuffer, 0, size);
+                System.out.println("Received inputData: " + inputData.replace("\r\n", "\\r\\n"));
+                String[] command = inputData.split("\r\n");
+                System.out.println("Received command: " + command[2]);
+
+                // Send response to client.
+                DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
+                out.writeBytes(encodeAsRespSimpleString(PING_RESPONSE));
+            }
 
             /*
             String command = new String(data, 0, size);
