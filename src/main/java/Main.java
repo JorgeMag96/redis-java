@@ -30,12 +30,14 @@ public class Main {
                 System.out.println(String.format("Received command: PING %s", argument));
 
                 DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
+                out.writeBytes(encodeAsRespSimpleString(PING_RESPONSE));
+                /*
                 if(argument.length() > 0) {
-                    //out.writeBytes(encodeAsRespString(argument));
-                    out.writeBytes(encodeAsRespString(PING_RESPONSE)); // For now ignore the argument and just respond with PONG.
+                    out.writeBytes(encodeAsRespBulkString(argument));
                 } else {
-                    out.writeBytes(encodeAsRespString(PING_RESPONSE));
+                    out.writeBytes(encodeAsRespSimpleString(PING_RESPONSE));
                 }
+                */
             }
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage() + ", " + e.getStackTrace()[0].toString());
@@ -50,7 +52,11 @@ public class Main {
         }
     }
 
-    private static String encodeAsRespString(String string) {
+    private static String encodeAsRespSimpleString(String string) {
         return String.format("+%s\r\n", string);
+    }
+
+    private static String encodeAsRespBulkString(String string) {
+        return String.format("$%d\r\n%s\r\n",string.length(), string);
     }
 }
