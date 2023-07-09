@@ -92,7 +92,7 @@ public class Main {
         String commandName = commandContent[0];
         System.out.println("Command is: " + commandName);
 
-        switch (commandName) {
+        switch (commandName.toUpperCase()) {
             case "ECHO":
                 return encodeRespBulkString(commandContent[1]);
             case "COMMAND":
