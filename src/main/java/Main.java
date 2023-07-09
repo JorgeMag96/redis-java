@@ -31,9 +31,9 @@ public class Main {
 
                 DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
                 if(argument.length() > 0) {
-                    out.writeBytes(argument);
+                    out.writeBytes(encodeAsRespString(argument));
                 } else {
-                    out.writeBytes(encodeAsRESPBulkString(PING_RESPONSE));
+                    out.writeBytes(encodeAsRespString(PING_RESPONSE));
                 }
             }
         } catch (IOException e) {
@@ -49,7 +49,7 @@ public class Main {
         }
     }
 
-    private static String encodeAsRESPBulkString(String string) {
+    private static String encodeAsRespString(String string) {
         return String.format("+%s\r\n", string);
     }
 }
