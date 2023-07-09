@@ -43,7 +43,7 @@ public class Main {
                     String response = handleRespArrayCommand(input);
                     System.out.println("Response: " + response.replace(CLRF, "\\r\\n"));
                     out.writeBytes(response);
-                } else if (input.startsWith("+")) {
+                } else {
                     out.writeBytes(encodeRespSimpleString(PING_RESPONSE));
                 }
             }
@@ -83,22 +83,27 @@ public class Main {
                     respArrayContent = respBulkStringSizeAndContent[2];
                     break;
                 default:
-                    throw new IllegalArgumentException("Invalid RESP type: " + type);
+                    String errorMessage = "Invalid RESP type: " + type;
+                    System.out.println(errorMessage);
+                    return encodeErrorMessage(errorMessage);
             }
         }
 
         String commandName = commandContent[0];
         System.out.println("Command is: " + commandName);
 
-        if ("ECHO".equalsIgnoreCase(commandName)) {
-            return encodeRespBulkString(commandContent[1]);
+        switch (commandName) {
+            case "ECHO":
+                return encodeRespBulkString(commandContent[1]);
+            case "COMMAND":
+                return String.format("*0%s", CLRF);
+            case "PING":
+                return encodeRespSimpleString(PING_RESPONSE);
+            default:
+                String errorMessage = "Unsupported command: " + commandName;
+                System.out.println(errorMessage);
+                return encodeErrorMessage(errorMessage);
         }
-
-        if ("COMMAND".equalsIgnoreCase(commandName)) {
-            return "*0\r\n";
-        }
-
-        throw new UnsupportedOperationException("Unsupported command: " + commandName);
     }
 
     private static String encodeRespSimpleString(String string) {
@@ -107,6 +112,10 @@ public class Main {
 
     private static String encodeRespBulkString(String string) {
         return String.format("$%d%s%s%s", string.length(), CLRF, string, CLRF);
+    }
+
+    private static String encodeErrorMessage(String string) {
+        return String.format("-%s%s", string, CLRF);
     }
 }
 
