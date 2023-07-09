@@ -2,11 +2,16 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Main {
 
     private static final String PING_RESPONSE = "PONG";
+    private static final String OK_RESPONSE = "OK";
     private static final String CLRF = "\r\n";
+
+    private static Map<String, String> redisVault = new HashMap<>();
 
     public static void main(String[] args) {
 
@@ -67,7 +72,7 @@ public class Main {
         int size = Integer.parseInt(respArrayLength.substring(1));
         String[] commandContent = new String[size];
 
-        String respArrayContent = input.split(respArrayLength.substring(1) + CLRF)[1];
+        String respArrayContent = input.split(CLRF, 2)[1];
 
         for (int i = 0; i < size; i++) {
             char type = respArrayContent.charAt(0);
@@ -92,17 +97,36 @@ public class Main {
         System.out.println("Command is: " + commandName);
 
         switch (commandName.toUpperCase()) {
-            case "ECHO":
-                return encodeRespBulkString(commandContent[1]);
             case "COMMAND":
                 return String.format("*0%s", CLRF);
             case "PING":
                 return encodeRespSimpleString(PING_RESPONSE);
+            case "ECHO":
+                return encodeRespBulkString(commandContent[1]);
+            case "SET":
+                return executeSetCommand(commandContent);
+            case "GET":
+                return executeGetCommand(commandContent);
             default:
                 String errorMessage = "Unsupported command: " + commandName;
                 System.out.println(errorMessage);
                 return encodeErrorMessage(errorMessage);
         }
+    }
+
+    private static String executeSetCommand(String[] commandContent) {
+        if(commandContent.length < 3) {
+            return encodeErrorMessage("Invalid SET command parameters, example usage: SET <key> <value>");
+        }
+        redisVault.put(commandContent[1], commandContent[2]);
+        return encodeRespSimpleString(OK_RESPONSE);
+    }
+
+    private static String executeGetCommand(String[] commandContent) {
+        if(commandContent.length < 2) {
+            return encodeErrorMessage("Invalid GET command parameters, example usage: GET <key>");
+        }
+        return encodeRespSimpleString(redisVault.get(commandContent[1]));
     }
 
     private static String encodeRespSimpleString(String string) {
