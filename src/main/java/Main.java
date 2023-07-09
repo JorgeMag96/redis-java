@@ -63,7 +63,6 @@ public class Main {
 
     private static String handleRespArrayCommand(String input) {
 
-        // Command has multiple lines.
         String respArrayLength = input.split(CLRF, 2)[0];
         int size = Integer.parseInt(respArrayLength.substring(1));
         String[] commandContent = new String[size];
