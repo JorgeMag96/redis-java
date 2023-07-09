@@ -33,7 +33,7 @@ public class Main {
                 if(argument.length() > 0) {
                     out.writeBytes(argument);
                 } else {
-                    out.writeBytes(PING_RESPONSE);
+                    out.writeBytes(encodeAsRESPBulkString(PING_RESPONSE));
                 }
             }
         } catch (IOException e) {
@@ -47,5 +47,9 @@ public class Main {
                 System.out.println("IOException: " + e.getMessage());
             }
         }
+    }
+
+    private static String encodeAsRESPBulkString(String string) {
+        return String.format("+%s\r\n", string);
     }
 }
