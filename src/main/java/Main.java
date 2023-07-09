@@ -9,18 +9,26 @@ public class Main {
 
     public static void main(String[] args) {
 
-        ServerSocket serverSocket = null;
-        Socket clientSocket = null;
         int port = 6379;
-        try {
-            serverSocket = new ServerSocket(port);
-            serverSocket.setReuseAddress(true);
+        try(ServerSocket ss = new ServerSocket(port)) {
+            ss.setReuseAddress(true);
 
             // Wait for connection from client.
-            System.out.println("Waiting for connection from client...");
-            clientSocket = serverSocket.accept();
+            System.out.println("Waiting for connections...");
 
-            // Read data from client.
+            while(true) {
+                Socket clientSocket = ss.accept();
+                String clientId = "client-" + System.currentTimeMillis();
+                System.out.println("Client connected: " + clientId);
+                new Thread(() -> handleClient(clientSocket, clientId)).start();
+            }
+        } catch (IOException e) {
+            System.out.println("IOException: " + e.getMessage() + ", " + e.getStackTrace()[0].toString());
+        }
+    }
+
+    private static void handleClient(Socket clientSocket, String clientId) {
+        try {
             byte[] inputBuffer = new byte[100];
             while(true) {
                 int size = clientSocket.getInputStream().read(inputBuffer);
@@ -36,19 +44,20 @@ public class Main {
                 out.writeBytes(encodeAsRespSimpleString(PING_RESPONSE));
             }
 
-            /*
-            String command = new String(data, 0, size);
-            if(command.startsWith("PING")) {
-                String argument = command.substring(4).trim();
-                System.out.println(String.format("Received command: PING %s", argument));
+            System.out.printf("Client %s disconnected.%n", clientId);
 
-                if(argument.length() > 0) {
-                    out.writeBytes(encodeAsRespBulkString(argument));
-                } else {
-                    out.writeBytes(encodeAsRespSimpleString(PING_RESPONSE));
-                }
-            }
-        */
+//            String command = new String(data, 0, size);
+//            if(command.startsWith("PING")) {
+//                String argument = command.substring(4).trim();
+//                System.out.println(String.format("Received command: PING %s", argument));
+//
+//                if(argument.length() > 0) {
+//                    out.writeBytes(encodeAsRespBulkString(argument));
+//                } else {
+//                    out.writeBytes(encodeAsRespSimpleString(PING_RESPONSE));
+//                }
+//            }
+
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage() + ", " + e.getStackTrace()[0].toString());
         } finally {
