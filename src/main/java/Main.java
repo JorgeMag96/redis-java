@@ -31,7 +31,8 @@ public class Main {
 
                 DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
                 if(argument.length() > 0) {
-                    out.writeBytes(encodeAsRespString(argument));
+                    //out.writeBytes(encodeAsRespString(argument));
+                    out.writeBytes(encodeAsRespString(PING_RESPONSE)); // For now ignore the argument and just respond with PONG.
                 } else {
                     out.writeBytes(encodeAsRespString(PING_RESPONSE));
                 }
