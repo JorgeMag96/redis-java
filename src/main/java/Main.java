@@ -22,23 +22,22 @@ public class Main {
 
             byte[] data = new byte[100];
             int size = clientSocket.getInputStream().read(data);
+            DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
+            out.writeBytes(encodeAsRespSimpleString(PING_RESPONSE));
 
+            /*
             String command = new String(data, 0, size);
-
             if(command.startsWith("PING")) {
                 String argument = command.substring(4).trim();
                 System.out.println(String.format("Received command: PING %s", argument));
 
-                DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
-                out.writeBytes(encodeAsRespSimpleString(PING_RESPONSE));
-                /*
                 if(argument.length() > 0) {
                     out.writeBytes(encodeAsRespBulkString(argument));
                 } else {
                     out.writeBytes(encodeAsRespSimpleString(PING_RESPONSE));
                 }
-                */
             }
+        */
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage() + ", " + e.getStackTrace()[0].toString());
         } finally {
