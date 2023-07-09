@@ -2,8 +2,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Main {
 
@@ -11,7 +11,7 @@ public class Main {
     private static final String OK_RESPONSE = "OK";
     private static final String CLRF = "\r\n";
 
-    private static Map<String, String> redisVault = new HashMap<>();
+    private static Map<String, Object[]> redisVault = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
 
@@ -115,18 +115,41 @@ public class Main {
     }
 
     private static String executeSetCommand(String[] commandContent) {
-        if(commandContent.length < 3) {
+        if (commandContent.length < 3) {
             return encodeErrorMessage("Invalid SET command parameters, example usage: SET <key> <value>");
         }
-        redisVault.put(commandContent[1], commandContent[2]);
+
+        if (commandContent.length == 5 && "PX".equalsIgnoreCase(commandContent[3])) {
+            try {
+                int expireMillis = Integer.parseInt(commandContent[4]);
+                redisVault.put(commandContent[1], new Object[]{commandContent[2], System.currentTimeMillis() + expireMillis});
+            } catch (NumberFormatException ex) {
+                return encodeErrorMessage("Invalid PX value, must be a valid number.");
+            }
+        } else {
+            redisVault.put(commandContent[1], new Object[]{commandContent[2], null});
+        }
+
         return encodeRespSimpleString(OK_RESPONSE);
     }
 
     private static String executeGetCommand(String[] commandContent) {
-        if(commandContent.length < 2) {
+        long currentTime = System.currentTimeMillis();
+        if (commandContent.length < 2) {
             return encodeErrorMessage("Invalid GET command parameters, example usage: GET <key>");
         }
-        return encodeRespSimpleString(redisVault.get(commandContent[1]));
+
+        Object[] value = redisVault.get(commandContent[1]);
+
+        if (value[0] == null) {
+            return encodeNullBulkString();
+        }
+        else if (value[1] != null && (Long) value[1] <= currentTime) {
+            redisVault.remove(commandContent[1]);
+            return encodeNullBulkString();
+        }
+
+        return encodeRespSimpleString((String) value[0]);
     }
 
     private static String encodeRespSimpleString(String string) {
@@ -139,6 +162,10 @@ public class Main {
 
     private static String encodeErrorMessage(String string) {
         return String.format("-%s%s", string, CLRF);
+    }
+
+    private static String encodeNullBulkString() {
+        return String.format("$-1%s", CLRF);
     }
 }
 
