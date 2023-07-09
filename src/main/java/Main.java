@@ -6,17 +6,18 @@ import java.net.Socket;
 public class Main {
 
     private static final String PING_RESPONSE = "PONG";
+    private static final String CLRF = "\r\n";
 
     public static void main(String[] args) {
 
         int port = 6379;
-        try(ServerSocket ss = new ServerSocket(port)) {
+        try (ServerSocket ss = new ServerSocket(port)) {
             ss.setReuseAddress(true);
 
             // Wait for connection from client.
             System.out.println("Waiting for connections...");
 
-            while(true) {
+            while (true) {
                 Socket clientSocket = ss.accept();
                 String clientId = "client-" + System.currentTimeMillis();
                 System.out.println("Client connected: " + clientId);
@@ -30,34 +31,23 @@ public class Main {
     private static void handleClient(Socket clientSocket, String clientId) {
         try {
             byte[] inputBuffer = new byte[100];
-            while(true) {
+            while (true) {
                 int size = clientSocket.getInputStream().read(inputBuffer);
-                if(size == -1) break;
+                if (size == -1) break;
 
-                String inputData = new String(inputBuffer, 0, size);
-                System.out.println("Received inputData: " + inputData.replace("\r\n", "\\r\\n"));
-                String[] command = inputData.split("\r\n");
-                System.out.println("Received command: " + command[2]);
-
-                // Send response to client.
+                String input = new String(inputBuffer, 0, size);
+                System.out.println("Received input: " + input.replace(CLRF, "\\r\\n"));
                 DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
-                out.writeBytes(encodeAsRespSimpleString(PING_RESPONSE));
+
+                if (input.startsWith("*")) {
+                    String response = handleRespArrayCommand(input);
+                    System.out.println("Response: " + response.replace(CLRF, "\\r\\n"));
+                    out.writeBytes(response);
+                } else if (input.startsWith("+")) {
+                    out.writeBytes(encodeRespSimpleString(PING_RESPONSE));
+                }
             }
-
             System.out.printf("Client %s disconnected.%n", clientId);
-
-//            String command = new String(data, 0, size);
-//            if(command.startsWith("PING")) {
-//                String argument = command.substring(4).trim();
-//                System.out.println(String.format("Received command: PING %s", argument));
-//
-//                if(argument.length() > 0) {
-//                    out.writeBytes(encodeAsRespBulkString(argument));
-//                } else {
-//                    out.writeBytes(encodeAsRespSimpleString(PING_RESPONSE));
-//                }
-//            }
-
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage() + ", " + e.getStackTrace()[0].toString());
         } finally {
@@ -71,11 +61,52 @@ public class Main {
         }
     }
 
-    private static String encodeAsRespSimpleString(String string) {
-        return String.format("+%s\r\n", string);
+    private static String handleRespArrayCommand(String input) {
+
+        // Command has multiple lines.
+        String respArrayLength = input.split(CLRF, 2)[0];
+        int size = Integer.parseInt(respArrayLength.substring(1));
+        String[] commandContent = new String[size];
+
+        String respArrayContent = input.split(respArrayLength.substring(1) + CLRF)[1];
+
+        for (int i = 0; i < size; i++) {
+            char type = respArrayContent.charAt(0);
+            //System.out.println("RESP type: " + type);
+
+            switch (type) {
+                case '+':
+                    throw new UnsupportedOperationException("Simple string not supported.");
+                case '$':
+                    String[] respBulkStringSizeAndContent = respArrayContent.substring(1).split(CLRF, 3);
+                    commandContent[i] = respBulkStringSizeAndContent[1];
+                    respArrayContent = respBulkStringSizeAndContent[2];
+                    break;
+                default:
+                    throw new IllegalArgumentException("Invalid RESP type: " + type);
+            }
+        }
+
+        String commandName = commandContent[0];
+        System.out.println("Command is: " + commandName);
+
+        if ("ECHO".equalsIgnoreCase(commandName)) {
+            return encodeRespBulkString(commandContent[1]);
+        }
+
+        if ("COMMAND".equalsIgnoreCase(commandName)) {
+            return "*0\r\n";
+        }
+
+        throw new UnsupportedOperationException("Unsupported command: " + commandName);
     }
 
-    private static String encodeAsRespBulkString(String string) {
-        return String.format("$%d\r\n%s\r\n",string.length(), string);
+    private static String encodeRespSimpleString(String string) {
+        return String.format("+%s%s", string, CLRF);
+    }
+
+    private static String encodeRespBulkString(String string) {
+        return String.format("$%d%s%s%s", string.length(), CLRF, string, CLRF);
     }
 }
+
